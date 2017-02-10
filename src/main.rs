@@ -105,9 +105,50 @@ impl<'a> SExpParser<'a> {
 		
 		Ok(SExp::Symbol(sym_string))
 	}
-	fn read_string(& mut self) -> Result<SExp, ReadError> {
-		Err(self.error_not_implemented())
+	
+	fn read_escaped_string_char(& mut self) -> Result<char, ReadError> {
+		let c = try!(self.next().ok_or(self.error_eof()));
+		
+		if c == '\\' {
+			let c = try!(self.next().ok_or(self.error_eof()));
+			Ok(
+				match c {
+					'n' => '\n',
+					't' => '\t',
+					'r' => '\r',
+					 _  => c,
+				}
+			)
+		} else {
+			Ok(c)
+		}
 	}
+	
+	fn read_string(& mut self) -> Result<SExp, ReadError> {
+		let c = try!(self.peek().ok_or(self.error_eof()));
+		
+		if c != '"' {
+			return Err(self.error_wrong_char(c, "\""));
+		} else {
+			self.advance();
+		}
+		
+		let mut str_val = String::new();
+		
+		loop {
+			let c = try!(self.peek().ok_or(self.error_eof()));
+			if c == '"' {
+				self.advance();
+				break;
+			} else {
+				let c = try!(self.read_escaped_string_char());
+				str_val.push(c);
+			}
+		}
+		
+		Ok(SExp::String(str_val))
+	}
+	
 	fn read_number(& mut self) -> Result<SExp, ReadError>{
 		Err(self.error_not_implemented())
 	}
